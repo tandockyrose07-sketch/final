@@ -3,10 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { DataProvider } from "@/contexts/DataContext";
 import { AppLayout } from "@/components/AppLayout";
+import { canAccessRoute, getDefaultRouteForRole } from "@/lib/permissions";
 
 // Pages
 import Login from "./pages/Login";
@@ -22,12 +23,19 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// Protected route component
+// Protected route component with role-based access
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const location = useLocation();
   
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+  
+  // Check if user has permission to access this route
+  if (!canAccessRoute(user?.role ?? null, location.pathname)) {
+    // Redirect to default allowed route for their role
+    return <Navigate to={getDefaultRouteForRole(user?.role ?? null)} replace />;
   }
   
   return <AppLayout>{children}</AppLayout>;

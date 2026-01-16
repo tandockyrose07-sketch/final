@@ -1,8 +1,8 @@
-
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { canAccessRoute } from "@/lib/permissions";
 import {
   Sidebar,
   SidebarContent,
@@ -50,7 +50,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     navigate("/login");
   };
   
-  const navItems = [
+  const allNavItems = [
     {
       title: "Dashboard",
       icon: LayoutDashboard,
@@ -87,6 +87,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       path: "/settings",
     },
   ];
+
+  // Filter navigation items based on user role
+  const navItems = allNavItems.filter((item) =>
+    canAccessRoute(user.role, item.path)
+  );
 
   return (
     <SidebarProvider>

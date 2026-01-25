@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import Webcam from "react-webcam";
 import { Camera, Loader2, AlertCircle, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,6 @@ import { useWebcam } from "@/hooks/useWebcam";
 import { useFaceDetection, DetectedFace } from "@/hooks/useFaceDetection";
 import { useData, Person } from "@/contexts/DataContext";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/sonner";
 
 interface WebcamFaceRecognitionProps {
@@ -18,9 +17,10 @@ const WebcamFaceRecognition: React.FC<WebcamFaceRecognitionProps> = ({
 }) => {
   const { webcamRef, hasPermission, error: webcamError, requestPermission, captureImage, isLoading: webcamLoading } = useWebcam();
   const { isDetecting, detectedFaces, error: detectionError, startContinuousDetection, stopDetection } = useFaceDetection();
-  const { people } = useData();
+  const { people, logAccess } = useData();
   
   const [isActive, setIsActive] = useState(false);
+  const loggedPersonsRef = useRef<Map<string, number>>(new Map());
 
   // Request camera permission on mount
   useEffect(() => {
@@ -41,33 +41,31 @@ const WebcamFaceRecognition: React.FC<WebcamFaceRecognitionProps> = ({
     }
   }, [detectedFaces, onFaceDetected, people]);
 
-  // Log access when registered face is detected
+  // Log access when registered face is detected - uses DataContext for real-time sync
   useEffect(() => {
-    const logAccess = async () => {
+    const processDetectedFaces = async () => {
       for (const face of detectedFaces) {
         if (face.isRegistered && face.matchedPersonId) {
           const person = people.find(p => p.id === face.matchedPersonId);
           if (person) {
-            // Check if we recently logged this person (within last 10 seconds) to avoid spam
-            const recentKey = `access_logged_${face.matchedPersonId}`;
-            const lastLogged = sessionStorage.getItem(recentKey);
+            // Check if we recently logged this person (within last 30 seconds) to avoid spam
             const now = Date.now();
+            const lastLogged = loggedPersonsRef.current.get(face.matchedPersonId);
             
-            if (!lastLogged || now - parseInt(lastLogged) > 10000) {
-              sessionStorage.setItem(recentKey, now.toString());
+            if (!lastLogged || now - lastLogged > 30000) {
+              loggedPersonsRef.current.set(face.matchedPersonId, now);
               
-              await supabase.from("access_logs").insert({
-                person_id: person.id,
-                person_name: `${person.firstName} ${person.lastName}`,
-                person_type: person.type,
-                access_type: "entry",
-                method: "facial",
-                granted: true,
-                location: "Main Gate - Auto Detection",
-              });
+              // Use the DataContext logAccess function for real-time sync with dashboard
+              await logAccess(
+                person.id,
+                `${person.firstName} ${person.lastName}`,
+                person.type,
+                "facial",
+                true
+              );
 
-              toast.success(`Detected: ${person.firstName} ${person.lastName}`, {
-                description: `Confidence: ${face.confidence}%`,
+              toast.success(`Access Granted: ${person.firstName} ${person.lastName}`, {
+                description: `Face recognized with ${face.confidence}% confidence`,
               });
             }
           }
@@ -76,9 +74,9 @@ const WebcamFaceRecognition: React.FC<WebcamFaceRecognitionProps> = ({
     };
 
     if (detectedFaces.some(f => f.isRegistered)) {
-      logAccess();
+      processDetectedFaces();
     }
-  }, [detectedFaces, people]);
+  }, [detectedFaces, people, logAccess]);
 
   const handleToggleDetection = useCallback(() => {
     if (isActive) {

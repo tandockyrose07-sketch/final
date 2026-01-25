@@ -70,8 +70,11 @@ export type Database = {
           id: string
           id_number: string | null
           last_name: string
+          mobile_number: string | null
           person_type: Database["public"]["Enums"]["person_type"]
           photo_url: string | null
+          strand: string | null
+          student_type: string | null
           updated_at: string
         }
         Insert: {
@@ -85,8 +88,11 @@ export type Database = {
           id?: string
           id_number?: string | null
           last_name: string
+          mobile_number?: string | null
           person_type: Database["public"]["Enums"]["person_type"]
           photo_url?: string | null
+          strand?: string | null
+          student_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -100,8 +106,11 @@ export type Database = {
           id?: string
           id_number?: string | null
           last_name?: string
+          mobile_number?: string | null
           person_type?: Database["public"]["Enums"]["person_type"]
           photo_url?: string | null
+          strand?: string | null
+          student_type?: string | null
           updated_at?: string
         }
         Relationships: []

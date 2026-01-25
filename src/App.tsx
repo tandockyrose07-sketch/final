@@ -11,6 +11,7 @@ import { canAccessRoute, getDefaultRouteForRole } from "@/lib/permissions";
 
 // Pages
 import Login from "./pages/Login";
+import SuperAdminSignup from "./pages/SuperAdminSignup";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import AccessControl from "./pages/access-control";
@@ -51,6 +52,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/ms-admin" element={<SuperAdminSignup />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -19,9 +19,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ShieldCheck, Fingerprint, ArrowLeft, Mail, Eye, EyeOff, Shield, Crown } from "lucide-react";
-import { UserRole } from "@/contexts/AuthContext";
+import { ShieldCheck, Fingerprint, ArrowLeft, Mail, Eye, EyeOff } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
 import PasswordRequirements, { usePasswordValidation } from "@/components/auth/PasswordRequirements";
 import FriendlyRecaptcha from "@/components/auth/FriendlyRecaptcha";
@@ -39,7 +37,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>("admin");
+  
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const { login, signup, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -163,7 +161,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const success = await signup(email, password, fullName, selectedRole);
+      const success = await signup(email, password, fullName, "admin");
       if (success) {
         await login(email, password);
         navigate("/dashboard");
@@ -506,45 +504,6 @@ const Login = () => {
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    <Label>Select Your Role</Label>
-                    <RadioGroup
-                      value={selectedRole}
-                      onValueChange={(value) => setSelectedRole(value as UserRole)}
-                      className="grid grid-cols-2 gap-3"
-                    >
-                      <Label
-                        htmlFor="role-admin"
-                        className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedRole === "admin"
-                            ? "border-primary bg-primary/5"
-                            : "border-muted hover:border-muted-foreground/50"
-                        }`}
-                      >
-                        <RadioGroupItem value="admin" id="role-admin" className="sr-only" />
-                        <Shield className="h-8 w-8 mb-2 text-blue-600" />
-                        <span className="font-medium">Admin</span>
-                        <span className="text-xs text-muted-foreground text-center mt-1">
-                          Manage users & access
-                        </span>
-                      </Label>
-                      <Label
-                        htmlFor="role-super-admin"
-                        className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                          selectedRole === "super_admin"
-                            ? "border-primary bg-primary/5"
-                            : "border-muted hover:border-muted-foreground/50"
-                        }`}
-                      >
-                        <RadioGroupItem value="super_admin" id="role-super-admin" className="sr-only" />
-                        <Crown className="h-8 w-8 mb-2 text-amber-500" />
-                        <span className="font-medium">Super Admin</span>
-                        <span className="text-xs text-muted-foreground text-center mt-1">
-                          Full system access
-                        </span>
-                      </Label>
-                    </RadioGroup>
-                  </div>
 
                   {/* Friendly reCAPTCHA */}
                   <FriendlyRecaptcha onVerify={setRecaptchaToken} />

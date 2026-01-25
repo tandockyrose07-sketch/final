@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 
 export type UserType = "student" | "teacher" | "staff";
+export type StudentType = "college" | "senior_high";
+export type Strand = "CSS" | "HUMS";
 
 export interface Person {
   id: string;
@@ -13,6 +15,9 @@ export interface Person {
   email: string;
   department?: string;
   idNumber?: string;
+  mobileNumber?: string;
+  studentType?: StudentType;
+  strand?: Strand;
   hasFacialData: boolean;
   hasFingerprint: boolean;
   photoUrl: string;
@@ -44,6 +49,7 @@ interface DataContextType {
   resetBiometrics: (personId: string) => Promise<void>;
   simulateAccess: (method: "facial" | "fingerprint", personId?: string) => Promise<{ granted: boolean; person: Person | null }>;
   refreshData: () => Promise<void>;
+  logAccess: (personId: string, personName: string, personType: UserType, method: "facial" | "fingerprint", granted: boolean) => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -62,6 +68,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: dbPerson.email || "",
     department: dbPerson.department || undefined,
     idNumber: dbPerson.id_number || undefined,
+    mobileNumber: dbPerson.mobile_number || undefined,
+    studentType: dbPerson.student_type as StudentType | undefined,
+    strand: dbPerson.strand as Strand | undefined,
     hasFacialData: dbPerson.has_facial_data,
     hasFingerprint: dbPerson.has_fingerprint,
     photoUrl: dbPerson.photo_url || "/placeholder.svg",
@@ -148,6 +157,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email: personData.email || null,
         department: personData.department || null,
         id_number: personData.idNumber || null,
+        mobile_number: personData.mobileNumber || null,
+        student_type: personData.studentType || null,
+        strand: personData.strand || null,
         photo_url: personData.photoUrl || null,
         has_facial_data: personData.hasFacialData,
         has_fingerprint: personData.hasFingerprint,
@@ -173,6 +185,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (updates.email !== undefined) dbUpdates.email = updates.email || null;
     if (updates.department !== undefined) dbUpdates.department = updates.department || null;
     if (updates.idNumber !== undefined) dbUpdates.id_number = updates.idNumber || null;
+    if (updates.mobileNumber !== undefined) dbUpdates.mobile_number = updates.mobileNumber || null;
+    if (updates.studentType !== undefined) dbUpdates.student_type = updates.studentType || null;
+    if (updates.strand !== undefined) dbUpdates.strand = updates.strand || null;
     if (updates.photoUrl !== undefined) dbUpdates.photo_url = updates.photoUrl || null;
     if (updates.hasFacialData !== undefined) dbUpdates.has_facial_data = updates.hasFacialData;
     if (updates.hasFingerprint !== undefined) dbUpdates.has_fingerprint = updates.hasFingerprint;
@@ -207,7 +222,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const enrollFacial = async (personId: string): Promise<boolean> => {
-    // Simulate enrollment process with delay
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const { error } = await supabase
@@ -231,7 +245,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const enrollFingerprint = async (personId: string): Promise<boolean> => {
-    // Simulate enrollment process with delay
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const { error } = await supabase
@@ -276,14 +289,44 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.success("Biometric data reset successfully");
   };
 
+  const logAccess = async (
+    personId: string,
+    personName: string,
+    personType: UserType,
+    method: "facial" | "fingerprint",
+    granted: boolean
+  ) => {
+    const accessType = "entry";
+    const { data: newLogData, error } = await supabase
+      .from("access_logs")
+      .insert({
+        person_id: personId,
+        person_name: personName,
+        person_type: personType,
+        access_type: accessType,
+        method,
+        granted,
+        location: "Main Gate",
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating access log:", error);
+      return;
+    }
+
+    if (newLogData) {
+      setAccessLogs((prev) => [mapAccessLogFromDb(newLogData), ...prev]);
+    }
+  };
+
   const simulateAccess = async (
     method: "facial" | "fingerprint",
     personId?: string
   ): Promise<{ granted: boolean; person: Person | null }> => {
-    // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // If no personId is provided, randomly select one from people who have the required biometric data
     const eligiblePeople = personId
       ? people.filter((p) => p.id === personId)
       : people.filter((p) =>
@@ -295,35 +338,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { granted: false, person: null };
     }
 
-    // Randomly select a person if none specified
     const person = personId
       ? eligiblePeople[0]
       : eligiblePeople[Math.floor(Math.random() * eligiblePeople.length)];
 
-    // 90% success rate for access attempts
     const granted = Math.random() > 0.1 && person.active;
 
-    // Create new access log in database
-    const accessType = Math.random() > 0.5 ? "entry" : "exit";
-    const { data: newLogData, error } = await supabase
-      .from("access_logs")
-      .insert({
-        person_id: person.id,
-        person_name: `${person.firstName} ${person.lastName}`,
-        person_type: person.type,
-        access_type: accessType,
-        method,
-        granted,
-        location: "Main Gate",
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error creating access log:", error);
-    } else if (newLogData) {
-      setAccessLogs((prev) => [mapAccessLogFromDb(newLogData), ...prev]);
-    }
+    await logAccess(person.id, `${person.firstName} ${person.lastName}`, person.type, method, granted);
 
     if (granted) {
       toast.success(`Access granted for ${person.firstName} ${person.lastName}`, {
@@ -354,6 +375,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetBiometrics,
         simulateAccess,
         refreshData,
+        logAccess,
       }}
     >
       {children}

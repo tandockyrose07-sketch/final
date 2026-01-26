@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import Webcam from "react-webcam";
-import { Camera, Check, RotateCcw, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Camera, Check, RotateCcw, Loader2, ChevronLeft, ChevronRight, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,6 +10,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +34,11 @@ type CaptureAngle = "front" | "left" | "right";
 interface CapturedImage {
   angle: CaptureAngle;
   dataUrl: string;
+}
+
+interface VideoDevice {
+  deviceId: string;
+  label: string;
 }
 
 const ANGLE_INSTRUCTIONS: Record<CaptureAngle, { label: string; instruction: string; icon: React.ReactNode }> = {
@@ -63,21 +75,48 @@ const FacialEnrollmentDialog: React.FC<FacialEnrollmentDialogProps> = ({
   const [isCapturing, setIsCapturing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [availableDevices, setAvailableDevices] = useState<VideoDevice[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
 
   const currentAngle = CAPTURE_SEQUENCE[currentAngleIndex];
   const progress = (capturedImages.length / CAPTURE_SEQUENCE.length) * 100;
+
+  // Get available video devices
+  const getVideoDevices = useCallback(async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices
+        .filter(device => device.kind === "videoinput")
+        .map((device, index) => ({
+          deviceId: device.deviceId,
+          label: device.label || `Camera ${index + 1}`
+        }));
+      setAvailableDevices(videoDevices);
+      if (videoDevices.length > 0 && !selectedDeviceId) {
+        setSelectedDeviceId(videoDevices[0].deviceId);
+      }
+    } catch (error) {
+      console.error("Error getting video devices:", error);
+    }
+  }, [selectedDeviceId]);
 
   // Request camera permission directly in user gesture
   const requestCameraPermission = useCallback(async () => {
     setIsRequestingPermission(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: 640, height: 480 },
+        video: { 
+          facingMode: "user", 
+          width: 640, 
+          height: 480,
+          deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined
+        },
         audio: false,
       });
       // Stop the stream immediately - Webcam component will handle its own stream
       stream.getTracks().forEach(track => track.stop());
       setHasPermission(true);
+      await getVideoDevices();
     } catch (error) {
       console.error("Camera permission error:", error);
       if ((error as Error).name === "NotAllowedError") {
@@ -90,7 +129,7 @@ const FacialEnrollmentDialog: React.FC<FacialEnrollmentDialogProps> = ({
     } finally {
       setIsRequestingPermission(false);
     }
-  }, []);
+  }, [selectedDeviceId, getVideoDevices]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -100,8 +139,11 @@ const FacialEnrollmentDialog: React.FC<FacialEnrollmentDialogProps> = ({
       setIsCapturing(false);
       setIsSaving(false);
       setCountdown(null);
+    } else {
+      // Get devices when dialog opens
+      getVideoDevices();
     }
-  }, [isOpen]);
+  }, [isOpen, getVideoDevices]);
 
   const captureImage = useCallback(() => {
     if (!webcamRef.current) return;
@@ -235,6 +277,25 @@ const FacialEnrollmentDialog: React.FC<FacialEnrollmentDialogProps> = ({
             })}
           </div>
 
+          {/* Webcam selector */}
+          {hasPermission && availableDevices.length > 1 && !isAllCaptured && (
+            <div className="flex items-center gap-3">
+              <Video className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select camera" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableDevices.map((device) => (
+                    <SelectItem key={device.deviceId} value={device.deviceId}>
+                      {device.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Camera view or permission request */}
           {!hasPermission ? (
             <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center gap-4">
@@ -279,7 +340,7 @@ const FacialEnrollmentDialog: React.FC<FacialEnrollmentDialogProps> = ({
                   videoConstraints={{
                     width: 640,
                     height: 480,
-                    facingMode: "user",
+                    deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
                   }}
                   className="w-full h-full object-cover"
                   mirrored

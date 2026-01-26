@@ -339,86 +339,76 @@ const Users = () => {
   };
 
   // Step 1: Select Person Type
-  const Step1PersonType = () => (
-    <div className="space-y-4">
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-medium">Select Person Type</h3>
-        <p className="text-sm text-muted-foreground">What type of person are you adding?</p>
+  const renderStep1 = () => {
+    const currentType = form.getValues("type");
+    
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-medium">Select Person Type</h3>
+          <p className="text-sm text-muted-foreground">What type of person are you adding?</p>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: "student", label: "Student", icon: "🎓" },
+            { value: "teacher", label: "Teacher", icon: "👨‍🏫" },
+            { value: "staff", label: "Staff", icon: "👔" },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => form.setValue("type", option.value as UserType)}
+              className={`p-4 rounded-lg border-2 cursor-pointer ${
+                currentType === option.value
+                  ? "border-primary bg-primary/5"
+                  : "border-muted bg-background"
+              }`}
+            >
+              <div className="text-3xl mb-2">{option.icon}</div>
+              <div className="font-medium">{option.label}</div>
+            </button>
+          ))}
+        </div>
       </div>
-      
-      <FormField
-        control={form.control}
-        name="type"
-        render={({ field }) => (
-          <FormItem>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: "student", label: "Student", icon: "🎓" },
-                { value: "teacher", label: "Teacher", icon: "👨‍🏫" },
-                { value: "staff", label: "Staff", icon: "👔" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => field.onChange(option.value)}
-                  className={`p-4 rounded-lg border-2 ${
-                    field.value === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-muted"
-                  }`}
-                >
-                  <div className="text-3xl mb-2">{option.icon}</div>
-                  <div className="font-medium">{option.label}</div>
-                </button>
-              ))}
-            </div>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  );
+    );
+  };
 
   // Step 2: Select Student Type (only for students)
-  const Step2StudentType = () => (
-    <div className="space-y-4">
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-medium">Select Student Type</h3>
-        <p className="text-sm text-muted-foreground">What level is the student?</p>
+  const renderStep2 = () => {
+    const currentStudentType = form.getValues("studentType");
+    
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-medium">Select Student Type</h3>
+          <p className="text-sm text-muted-foreground">What level is the student?</p>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { value: "college", label: "College", icon: "🏛️", desc: "BSIT, BSBA, BSHM" },
+            { value: "senior_high", label: "Senior High", icon: "📚", desc: "CSS, HUMS" },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => form.setValue("studentType", option.value as StudentType)}
+              className={`p-4 rounded-lg border-2 text-left cursor-pointer ${
+                currentStudentType === option.value
+                  ? "border-primary bg-primary/5"
+                  : "border-muted bg-background"
+              }`}
+            >
+              <div className="text-3xl mb-2">{option.icon}</div>
+              <div className="font-medium">{option.label}</div>
+              <div className="text-xs text-muted-foreground">{option.desc}</div>
+            </button>
+          ))}
+        </div>
       </div>
-      
-      <FormField
-        control={form.control}
-        name="studentType"
-        render={({ field }) => (
-          <FormItem>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { value: "college", label: "College", icon: "🏛️", desc: "BSIT, BSBA, BSHM" },
-                { value: "senior_high", label: "Senior High", icon: "📚", desc: "CSS, HUMS" },
-              ].map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => field.onChange(option.value)}
-                  className={`p-4 rounded-lg border-2 text-left ${
-                    field.value === option.value
-                      ? "border-primary bg-primary/5"
-                      : "border-muted"
-                  }`}
-                >
-                  <div className="text-3xl mb-2">{option.icon}</div>
-                  <div className="font-medium">{option.label}</div>
-                  <div className="text-xs text-muted-foreground">{option.desc}</div>
-                </button>
-              ))}
-            </div>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  );
+    );
+  };
 
   // Step 3: Enter Details
   const Step3Details = () => {
@@ -603,9 +593,9 @@ const Users = () => {
   const getStepContent = () => {
     switch (formStep) {
       case 1:
-        return <Step1PersonType />;
+        return renderStep1();
       case 2:
-        return <Step2StudentType />;
+        return renderStep2();
       case 3:
         return <Step3Details />;
       default:

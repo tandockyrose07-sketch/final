@@ -361,10 +361,10 @@ const Users = () => {
                   key={option.value}
                   type="button"
                   onClick={() => field.onChange(option.value)}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 ${
                     field.value === option.value
                       ? "border-primary bg-primary/5"
-                      : "border-muted hover:border-muted-foreground/50"
+                      : "border-muted"
                   }`}
                 >
                   <div className="text-3xl mb-2">{option.icon}</div>
@@ -401,10 +401,10 @@ const Users = () => {
                   key={option.value}
                   type="button"
                   onClick={() => field.onChange(option.value)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                  className={`p-4 rounded-lg border-2 text-left ${
                     field.value === option.value
                       ? "border-primary bg-primary/5"
-                      : "border-muted hover:border-muted-foreground/50"
+                      : "border-muted"
                   }`}
                 >
                   <div className="text-3xl mb-2">{option.icon}</div>

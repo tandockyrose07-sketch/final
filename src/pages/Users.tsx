@@ -323,18 +323,28 @@ const Users = () => {
           <Input
             id="firstName"
             value={formData.firstName}
-            onChange={(e) => updateField("firstName", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value.slice(0, 30);
+              setFormData(prev => ({ ...prev, firstName: value }));
+              if (errors.firstName) setErrors(prev => ({ ...prev, firstName: undefined }));
+            }}
             placeholder="John"
+            maxLength={30}
           />
           {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
+          <Label htmlFor="Last Name">Last Name</Label>
           <Input
             id="lastName"
             value={formData.lastName}
-            onChange={(e) => updateField("lastName", e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value.slice(0, 30);
+              setFormData(prev => ({ ...prev, lastName: value }));
+              if (errors.lastName) setErrors(prev => ({ ...prev, lastName: undefined }));
+            }}
             placeholder="Doe"
+            maxLength={30}
           />
           {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
         </div>

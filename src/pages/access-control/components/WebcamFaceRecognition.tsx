@@ -238,20 +238,12 @@ const WebcamFaceRecognition: React.FC<WebcamFaceRecognitionProps> = ({
           })}
         </div>
 
-        {/* Scanning Overlay */}
+        {/* Live indicator */}
         {isActive && (
-          <>
-            {/* Scan line animation */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-scan" />
-            </div>
-            
-            {/* Live indicator */}
-            <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-white text-xs font-medium">LIVE</span>
-            </div>
-          </>
+          <div className="absolute top-4 left-4 flex items-center gap-2 bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+            <span className="text-white text-xs font-medium">LIVE</span>
+          </div>
         )}
 
         {/* Corner Frame */}

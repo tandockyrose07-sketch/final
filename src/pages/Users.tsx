@@ -45,8 +45,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Users as UsersIcon, Plus, Pencil, Trash2, Search } from "lucide-react";
 import { z } from "zod";
-import { useForm, UseFormReturn } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 
 const DEPARTMENTS_COLLEGE = ["BSIT", "BSBA", "BSHM"] as const;
@@ -66,210 +74,6 @@ const personSchema = z.object({
 });
 
 type FormData = z.infer<typeof personSchema>;
-
-interface PersonFormProps {
-  form: UseFormReturn<FormData>;
-  watchedType: "student" | "teacher" | "staff";
-  watchedStudentType: "college" | "senior_high" | undefined;
-}
-
-const PersonFormContent: React.FC<PersonFormProps> = ({ form, watchedType, watchedStudentType }) => {
-  const [firstName, setFirstName] = useState(form.getValues("firstName"));
-  const [lastName, setLastName] = useState(form.getValues("lastName"));
-  const [email, setEmail] = useState(form.getValues("email"));
-  const [idNumber, setIdNumber] = useState(form.getValues("idNumber") || "");
-  const [mobileNumber, setMobileNumber] = useState(form.getValues("mobileNumber") || "");
-
-  return (
-    <div className="space-y-4">
-      {/* Person Type */}
-      <div className="space-y-2">
-        <Label>Person Type</Label>
-        <div className="grid grid-cols-3 gap-2">
-          {(["student", "teacher", "staff"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => form.setValue("type", type)}
-              className={`p-3 rounded border text-sm font-medium capitalize ${
-                watchedType === type
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Student Type */}
-      {watchedType === "student" && (
-        <div className="space-y-2">
-          <Label>Student Type</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {(["college", "senior_high"] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => form.setValue("studentType", st)}
-                className={`p-3 rounded border text-sm font-medium ${
-                  watchedStudentType === st
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-background text-foreground"
-                }`}
-              >
-                {st === "college" ? "College" : "Senior High"}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Name Fields */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name</Label>
-          <Input
-            id="firstName"
-            placeholder="John"
-            maxLength={30}
-            value={firstName}
-            onChange={(e) => {
-              setFirstName(e.target.value);
-              form.setValue("firstName", e.target.value);
-            }}
-          />
-          {form.formState.errors.firstName && (
-            <p className="text-sm text-destructive">{form.formState.errors.firstName.message}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name</Label>
-          <Input
-            id="lastName"
-            placeholder="Doe"
-            maxLength={30}
-            value={lastName}
-            onChange={(e) => {
-              setLastName(e.target.value);
-              form.setValue("lastName", e.target.value);
-            }}
-          />
-          {form.formState.errors.lastName && (
-            <p className="text-sm text-destructive">{form.formState.errors.lastName.message}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Email */}
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="john.doe@example.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            form.setValue("email", e.target.value);
-          }}
-        />
-        {form.formState.errors.email && (
-          <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>
-        )}
-      </div>
-
-      {/* Department */}
-      {(watchedType !== "student" || watchedStudentType === "college") && (
-        <div className="space-y-2">
-          <Label>Department</Label>
-          <Select
-            value={form.watch("department") || ""}
-            onValueChange={(value) => form.setValue("department", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select department" />
-            </SelectTrigger>
-            <SelectContent>
-              {(watchedType === "student" ? DEPARTMENTS_COLLEGE : DEPARTMENTS_STAFF).map((dept) => (
-                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.department && (
-            <p className="text-sm text-destructive">{form.formState.errors.department.message}</p>
-          )}
-        </div>
-      )}
-
-      {/* Strand */}
-      {watchedType === "student" && watchedStudentType === "senior_high" && (
-        <div className="space-y-2">
-          <Label>Strand</Label>
-          <Select
-            value={form.watch("strand") || ""}
-            onValueChange={(value) => form.setValue("strand", value as "CSS" | "HUMS")}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select strand" />
-            </SelectTrigger>
-            <SelectContent>
-              {STRANDS.map((strand) => (
-                <SelectItem key={strand} value={strand}>
-                  {strand === "CSS" ? "CSS (Computer Systems Servicing)" : "HUMS (Humanities and Social Sciences)"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {form.formState.errors.strand && (
-            <p className="text-sm text-destructive">{form.formState.errors.strand.message}</p>
-          )}
-        </div>
-      )}
-
-      {/* ID Number */}
-      {watchedType === "student" && (
-        <div className="space-y-2">
-          <Label htmlFor="idNumber">ID Number (6 digits)</Label>
-          <Input
-            id="idNumber"
-            placeholder="123456"
-            maxLength={6}
-            value={idNumber}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-              setIdNumber(value);
-              form.setValue("idNumber", value);
-            }}
-          />
-          {form.formState.errors.idNumber && (
-            <p className="text-sm text-destructive">{form.formState.errors.idNumber.message}</p>
-          )}
-        </div>
-      )}
-
-      {/* Mobile Number */}
-      {watchedType === "student" && (
-        <div className="space-y-2">
-          <Label htmlFor="mobileNumber">Mobile Number (optional)</Label>
-          <Input
-            id="mobileNumber"
-            placeholder="+63 9XX XXX XXXX"
-            value={mobileNumber}
-            onChange={(e) => {
-              setMobileNumber(e.target.value);
-              form.setValue("mobileNumber", e.target.value);
-            }}
-          />
-          {form.formState.errors.mobileNumber && (
-            <p className="text-sm text-destructive">{form.formState.errors.mobileNumber.message}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const Users = () => {
   const { people, addPerson, updatePerson, deletePerson, isLoading } = useData();
@@ -378,8 +182,7 @@ const Users = () => {
     return true;
   };
 
-  const handleAddPerson = async () => {
-    const data = form.getValues();
+  const handleAddPerson = async (data: FormData) => {
     if (!validateForm(data)) return;
 
     setIsSubmitting(true);
@@ -408,8 +211,7 @@ const Users = () => {
     }
   };
 
-  const handleEditPerson = async () => {
-    const data = form.getValues();
+  const handleEditPerson = async (data: FormData) => {
     if (!selectedPerson || !validateForm(data)) return;
 
     setIsSubmitting(true);
@@ -462,6 +264,195 @@ const Users = () => {
         return "bg-muted text-muted-foreground";
     }
   };
+
+  const PersonFormContent = () => (
+    <div className="space-y-4">
+      {/* Person Type */}
+      <div className="space-y-2">
+        <Label>Person Type</Label>
+        <div className="grid grid-cols-3 gap-2">
+          {(["student", "teacher", "staff"] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => form.setValue("type", type)}
+              className={`p-3 rounded border text-sm font-medium capitalize ${
+                watchedType === type
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-foreground"
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Student Type - only for students */}
+      {watchedType === "student" && (
+        <div className="space-y-2">
+          <Label>Student Type</Label>
+          <div className="grid grid-cols-2 gap-2">
+            {(["college", "senior_high"] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => form.setValue("studentType", st)}
+                className={`p-3 rounded border text-sm font-medium ${
+                  watchedStudentType === st
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-foreground"
+                }`}
+              >
+                {st === "college" ? "College" : "Senior High"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Name Fields */}
+      <div className="grid grid-cols-2 gap-4">
+        <FormField
+          control={form.control}
+          name="firstName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>First Name</FormLabel>
+              <FormControl>
+                <Input placeholder="John" maxLength={30} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="lastName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Last Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Doe" maxLength={30} {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
+
+      {/* Email */}
+      <FormField
+        control={form.control}
+        name="email"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Email</FormLabel>
+            <FormControl>
+              <Input type="email" placeholder="john.doe@example.com" {...field} />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      {/* Department - for college students and staff/teacher */}
+      {(watchedType !== "student" || watchedStudentType === "college") && (
+        <FormField
+          control={form.control}
+          name="department"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Department</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {(watchedType === "student" ? DEPARTMENTS_COLLEGE : DEPARTMENTS_STAFF).map((dept) => (
+                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* Strand - for senior high students */}
+      {watchedType === "student" && watchedStudentType === "senior_high" && (
+        <FormField
+          control={form.control}
+          name="strand"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Strand</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select strand" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {STRANDS.map((strand) => (
+                    <SelectItem key={strand} value={strand}>
+                      {strand === "CSS" ? "CSS (Computer Systems Servicing)" : "HUMS (Humanities and Social Sciences)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* ID Number - for students */}
+      {watchedType === "student" && (
+        <FormField
+          control={form.control}
+          name="idNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>ID Number (6 digits)</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="123456"
+                  maxLength={6}
+                  {...field}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    field.onChange(value);
+                  }}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+
+      {/* Mobile Number - for students */}
+      {watchedType === "student" && (
+        <FormField
+          control={form.control}
+          name="mobileNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mobile Number (optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="+63 9XX XXX XXXX" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -599,22 +590,19 @@ const Users = () => {
             <DialogTitle>Add New Person</DialogTitle>
             <DialogDescription>Add a new student, teacher, or staff member.</DialogDescription>
           </DialogHeader>
-          {isAddDialogOpen && (
-            <PersonFormContent
-              key="add-form"
-              form={form}
-              watchedType={watchedType}
-              watchedStudentType={watchedStudentType}
-            />
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleAddPerson} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Add Person"}
-            </Button>
-          </DialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleAddPerson)} className="space-y-4">
+              <PersonFormContent />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Add Person"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
@@ -631,22 +619,19 @@ const Users = () => {
             <DialogTitle>Edit Person</DialogTitle>
             <DialogDescription>Update details for {selectedPerson?.firstName} {selectedPerson?.lastName}</DialogDescription>
           </DialogHeader>
-          {isEditDialogOpen && (
-            <PersonFormContent
-              key={`edit-form-${selectedPerson?.id}`}
-              form={form}
-              watchedType={watchedType}
-              watchedStudentType={watchedStudentType}
-            />
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleEditPerson} disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleEditPerson)} className="space-y-4">
+              <PersonFormContent />
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 

@@ -29,7 +29,6 @@ import {
   ShieldCheck,
   LayoutDashboard,
   History,
-  Camera,
 } from "lucide-react";
 
 interface AppLayoutProps {
@@ -60,11 +59,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       title: "User Management",
       icon: Users,
       path: "/users",
-    },
-    {
-      title: "Access Control",
-      icon: Camera,
-      path: "/access-control",
     },
     {
       title: "Access Logs",

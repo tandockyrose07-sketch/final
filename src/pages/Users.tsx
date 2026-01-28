@@ -43,7 +43,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users as UsersIcon, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Users as UsersIcon, Plus, Pencil, Trash2, Search, ArrowLeft, ArrowRight } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -55,15 +55,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Label } from "@/components/ui/label";
 
 const DEPARTMENTS_COLLEGE = ["BSIT", "BSBA", "BSHM"] as const;
 const DEPARTMENTS_STAFF = ["Administration", "HR", "IT", "Finance", "Facilities", "Library"] as const;
 const STRANDS = ["CSS", "HUMS"] as const;
 
+// Validation schema
 const personSchema = z.object({
-  firstName: z.string().min(1, "First name is required").max(30),
-  lastName: z.string().min(1, "Last name is required").max(30),
+  firstName: z.string().min(1, "First name is required").max(50),
+  lastName: z.string().min(1, "Last name is required").max(50),
   email: z.string().email("Invalid email address").max(100),
   type: z.enum(["student", "teacher", "staff"] as const),
   studentType: z.enum(["college", "senior_high"] as const).optional(),
@@ -84,6 +84,7 @@ const Users = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formStep, setFormStep] = useState(1);
 
   const form = useForm<FormData>({
     resolver: zodResolver(personSchema),
@@ -92,7 +93,7 @@ const Users = () => {
       lastName: "",
       email: "",
       type: "student",
-      studentType: "college",
+      studentType: undefined,
       department: "",
       strand: undefined,
       idNumber: "",
@@ -121,12 +122,13 @@ const Users = () => {
       lastName: "",
       email: "",
       type: "student",
-      studentType: "college",
+      studentType: undefined,
       department: "",
       strand: undefined,
       idNumber: "",
       mobileNumber: "",
     });
+    setFormStep(1);
   };
 
   const handleOpenAddDialog = () => {
@@ -141,12 +143,20 @@ const Users = () => {
       lastName: person.lastName,
       email: person.email,
       type: person.type,
-      studentType: person.studentType || "college",
+      studentType: person.studentType,
       department: person.department || "",
       strand: person.strand,
       idNumber: person.idNumber || "",
       mobileNumber: person.mobileNumber || "",
     });
+    // Set appropriate step based on person type
+    if (person.type === "student" && person.studentType) {
+      setFormStep(3);
+    } else if (person.type !== "student") {
+      setFormStep(2);
+    } else {
+      setFormStep(1);
+    }
     setIsEditDialogOpen(true);
   };
 
@@ -155,35 +165,98 @@ const Users = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const validateForm = (data: FormData): boolean => {
+  const validateCurrentStep = (): boolean => {
+    const data = form.getValues();
+    
+    if (formStep === 1) {
+      if (!data.type) {
+        form.setError("type", { message: "Please select a person type" });
+        return false;
+      }
+      return true;
+    }
+    
+    if (formStep === 2 && data.type === "student") {
+      if (!data.studentType) {
+        form.setError("studentType", { message: "Please select student type" });
+        return false;
+      }
+      return true;
+    }
+    
+    return true;
+  };
+
+  const handleNextStep = () => {
+    if (!validateCurrentStep()) return;
+    
+    const data = form.getValues();
+    
+    if (formStep === 1) {
+      if (data.type === "student") {
+        setFormStep(2); // Go to student type selection
+      } else {
+        setFormStep(3); // Skip to details for staff/teacher
+      }
+    } else if (formStep === 2) {
+      setFormStep(3); // Go to details
+    }
+  };
+
+  const handlePrevStep = () => {
+    const data = form.getValues();
+    
+    if (formStep === 3) {
+      if (data.type === "student") {
+        setFormStep(2);
+      } else {
+        setFormStep(1);
+      }
+    } else if (formStep === 2) {
+      setFormStep(1);
+    }
+  };
+
+  const validateFinalForm = (data: FormData): boolean => {
+    // Validate ID number for students (6 digits)
     if (data.type === "student") {
       if (!/^\d{6}$/.test(data.idNumber || "")) {
         form.setError("idNumber", { message: "ID number must be exactly 6 digits" });
         return false;
       }
-      if (data.studentType === "college" && !DEPARTMENTS_COLLEGE.includes(data.department as typeof DEPARTMENTS_COLLEGE[number])) {
-        form.setError("department", { message: "Please select a department" });
-        return false;
+      
+      if (data.studentType === "college") {
+        if (!DEPARTMENTS_COLLEGE.includes(data.department as typeof DEPARTMENTS_COLLEGE[number])) {
+          form.setError("department", { message: "Please select a valid department" });
+          return false;
+        }
       }
-      if (data.studentType === "senior_high" && !STRANDS.includes(data.strand as typeof STRANDS[number])) {
-        form.setError("strand", { message: "Please select a strand" });
-        return false;
+      
+      if (data.studentType === "senior_high") {
+        if (!STRANDS.includes(data.strand as typeof STRANDS[number])) {
+          form.setError("strand", { message: "Please select a valid strand" });
+          return false;
+        }
       }
     } else {
+      // Teacher or Staff
       if (!data.department || data.department.trim() === "") {
         form.setError("department", { message: "Department is required" });
         return false;
       }
     }
+    
+    // Validate mobile number format (optional but if provided, validate)
     if (data.mobileNumber && !/^[\d+\-\s]{10,15}$/.test(data.mobileNumber)) {
       form.setError("mobileNumber", { message: "Please enter a valid mobile number" });
       return false;
     }
+    
     return true;
   };
 
   const handleAddPerson = async (data: FormData) => {
-    if (!validateForm(data)) return;
+    if (!validateFinalForm(data)) return;
 
     setIsSubmitting(true);
     try {
@@ -212,7 +285,7 @@ const Users = () => {
   };
 
   const handleEditPerson = async (data: FormData) => {
-    if (!selectedPerson || !validateForm(data)) return;
+    if (!selectedPerson || !validateFinalForm(data)) return;
 
     setIsSubmitting(true);
     try {
@@ -261,197 +334,367 @@ const Users = () => {
       case "staff":
         return "bg-amber-50 text-amber-700 border-amber-200";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
 
-  const PersonFormContent = () => (
-    <div className="space-y-4">
-      {/* Person Type */}
-      <div className="space-y-2">
-        <Label>Person Type</Label>
-        <div className="grid grid-cols-3 gap-2">
-          {(["student", "teacher", "staff"] as const).map((type) => (
+  // Step 1: Select Person Type
+  const renderStep1 = () => {
+    const currentType = form.getValues("type");
+    
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-medium">Select Person Type</h3>
+          <p className="text-sm text-muted-foreground">What type of person are you adding?</p>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: "student", label: "Student", icon: "🎓" },
+            { value: "teacher", label: "Teacher", icon: "👨‍🏫" },
+            { value: "staff", label: "Staff", icon: "👔" },
+          ].map((option) => (
             <button
-              key={type}
+              key={option.value}
               type="button"
-              onClick={() => form.setValue("type", type)}
-              className={`p-3 rounded border text-sm font-medium capitalize ${
-                watchedType === type
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-foreground"
+              onClick={() => form.setValue("type", option.value as UserType)}
+              className={`p-4 rounded-lg border-2 cursor-pointer ${
+                currentType === option.value
+                  ? "border-primary bg-primary/5"
+                  : "border-muted bg-background"
               }`}
             >
-              {type}
+              <div className="text-3xl mb-2">{option.icon}</div>
+              <div className="font-medium">{option.label}</div>
             </button>
           ))}
         </div>
       </div>
+    );
+  };
 
-      {/* Student Type - only for students */}
-      {watchedType === "student" && (
-        <div className="space-y-2">
-          <Label>Student Type</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {(["college", "senior_high"] as const).map((st) => (
-              <button
-                key={st}
-                type="button"
-                onClick={() => form.setValue("studentType", st)}
-                className={`p-3 rounded border text-sm font-medium ${
-                  watchedStudentType === st
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-background text-foreground"
-                }`}
-              >
-                {st === "college" ? "College" : "Senior High"}
-              </button>
-            ))}
-          </div>
+  // Step 2: Select Student Type (only for students)
+  const renderStep2 = () => {
+    const currentStudentType = form.getValues("studentType");
+    
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-medium">Select Student Type</h3>
+          <p className="text-sm text-muted-foreground">What level is the student?</p>
         </div>
-      )}
-
-      {/* Name Fields */}
-      <div className="grid grid-cols-2 gap-4">
-        <FormField
-          control={form.control}
-          name="firstName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>First Name</FormLabel>
-              <FormControl>
-                <Input placeholder="John" maxLength={30} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="lastName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Last Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Doe" maxLength={30} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { value: "college", label: "College", icon: "🏛️", desc: "BSIT, BSBA, BSHM" },
+            { value: "senior_high", label: "Senior High", icon: "📚", desc: "CSS, HUMS" },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => form.setValue("studentType", option.value as StudentType)}
+              className={`p-4 rounded-lg border-2 text-left cursor-pointer ${
+                currentStudentType === option.value
+                  ? "border-primary bg-primary/5"
+                  : "border-muted bg-background"
+              }`}
+            >
+              <div className="text-3xl mb-2">{option.icon}</div>
+              <div className="font-medium">{option.label}</div>
+              <div className="text-xs text-muted-foreground">{option.desc}</div>
+            </button>
+          ))}
+        </div>
       </div>
+    );
+  };
 
-      {/* Email */}
-      <FormField
-        control={form.control}
-        name="email"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Email</FormLabel>
-            <FormControl>
-              <Input type="email" placeholder="john.doe@example.com" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+  // Step 3: Enter Details
+  const Step3Details = () => {
+    const type = form.getValues("type");
+    const studentType = form.getValues("studentType");
+    
+    return (
+      <div className="space-y-4">
+        <div className="text-center mb-4">
+          <h3 className="text-lg font-medium">Enter Details</h3>
+          <p className="text-sm text-muted-foreground">
+            {type === "student" 
+              ? studentType === "college" 
+                ? "College Student Information" 
+                : "Senior High Student Information"
+              : `${type === "teacher" ? "Teacher" : "Staff"} Information`}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="John" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email Address</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="john.doe@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Mobile Number - for students */}
+        {type === "student" && (
+          <FormField
+            control={form.control}
+            name="mobileNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mobile Number</FormLabel>
+                <FormControl>
+                  <Input placeholder="+63 9XX XXX XXXX" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         )}
-      />
 
-      {/* Department - for college students and staff/teacher */}
-      {(watchedType !== "student" || watchedStudentType === "college") && (
-        <FormField
-          control={form.control}
-          name="department"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Department</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+        {/* Department - for College students and Staff/Teacher */}
+        {(type !== "student" || studentType === "college") && (
+          <FormField
+            control={form.control}
+            name="department"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Department</FormLabel>
+                {type === "student" && studentType === "college" ? (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS_COLLEGE.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {DEPARTMENTS_STAFF.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* Strand - for Senior High students */}
+        {type === "student" && studentType === "senior_high" && (
+          <FormField
+            control={form.control}
+            name="strand"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Strand</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select strand" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {STRANDS.map((strand) => (
+                      <SelectItem key={strand} value={strand}>
+                        {strand === "CSS" ? "CSS (Computer Systems Servicing)" : "HUMS (Humanities and Social Sciences)"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+
+        {/* ID Number - for students */}
+        {type === "student" && (
+          <FormField
+            control={form.control}
+            name="idNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>ID Number (6 digits)</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
+                  <Input
+                    placeholder="123456"
+                    maxLength={6}
+                    {...field}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      field.onChange(value);
+                    }}
+                  />
                 </FormControl>
-                <SelectContent>
-                  {(watchedType === "student" ? DEPARTMENTS_COLLEGE : DEPARTMENTS_STAFF).map((dept) => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </div>
+    );
+  };
 
-      {/* Strand - for senior high students */}
-      {watchedType === "student" && watchedStudentType === "senior_high" && (
-        <FormField
-          control={form.control}
-          name="strand"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Strand</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select strand" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {STRANDS.map((strand) => (
-                    <SelectItem key={strand} value={strand}>
-                      {strand === "CSS" ? "CSS (Computer Systems Servicing)" : "HUMS (Humanities and Social Sciences)"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
+  const getStepContent = () => {
+    switch (formStep) {
+      case 1:
+        return renderStep1();
+      case 2:
+        return renderStep2();
+      case 3:
+        return <Step3Details />;
+      default:
+        return null;
+    }
+  };
 
-      {/* ID Number - for students */}
-      {watchedType === "student" && (
-        <FormField
-          control={form.control}
-          name="idNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>ID Number (6 digits)</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder="123456"
-                  maxLength={6}
-                  {...field}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, "").slice(0, 6);
-                    field.onChange(value);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
+  const getTotalSteps = () => {
+    const type = form.getValues("type");
+    return type === "student" ? 3 : 2;
+  };
 
-      {/* Mobile Number - for students */}
-      {watchedType === "student" && (
-        <FormField
-          control={form.control}
-          name="mobileNumber"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mobile Number (optional)</FormLabel>
-              <FormControl>
-                <Input placeholder="+63 9XX XXX XXXX" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      )}
-    </div>
+  const PersonFormDialog = ({ 
+    isOpen, 
+    onOpenChange, 
+    title, 
+    description, 
+    onSubmit, 
+    submitLabel 
+  }: { 
+    isOpen: boolean; 
+    onOpenChange: (open: boolean) => void; 
+    title: string; 
+    description: string;
+    onSubmit: (data: FormData) => Promise<void>;
+    submitLabel: string;
+  }) => (
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) resetForm();
+      onOpenChange(open);
+    }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        
+        {/* Progress Indicator */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          {Array.from({ length: getTotalSteps() }).map((_, i) => (
+            <div
+              key={i}
+              className={`h-2 w-12 rounded-full transition-colors ${
+                i + 1 <= formStep ? "bg-primary" : "bg-muted"
+              }`}
+            />
+          ))}
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {getStepContent()}
+            
+            <DialogFooter className="flex gap-2">
+              {formStep > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePrevStep}
+                  disabled={isSubmitting}
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back
+                </Button>
+              )}
+              
+              {formStep < getTotalSteps() ? (
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={isSubmitting}
+                  className="ml-auto"
+                >
+                  Next
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      resetForm();
+                      onOpenChange(false);
+                    }}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Saving..." : submitLabel}
+                  </Button>
+                </>
+              )}
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 
   return (
@@ -475,7 +718,9 @@ const Users = () => {
             <UsersIcon className="mr-2 h-5 w-5" />
             All Users
           </CardTitle>
-          <CardDescription>Manage user records for facial enrollment</CardDescription>
+          <CardDescription>
+            Manage user records for biometric enrollment
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -488,6 +733,7 @@ const Users = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by type" />
@@ -557,14 +803,18 @@ const Users = () => {
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">{person.email}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleOpenEditDialog(person)}>
+                        <div className="flex justify-end space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEditDialog(person)}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-destructive"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => handleOpenDeleteDialog(person)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -581,59 +831,24 @@ const Users = () => {
       </Card>
 
       {/* Add Person Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-        if (!open) resetForm();
-        setIsAddDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Person</DialogTitle>
-            <DialogDescription>Add a new student, teacher, or staff member.</DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleAddPerson)} className="space-y-4">
-              <PersonFormContent />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Add Person"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <PersonFormDialog
+        isOpen={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        title="Add New Person"
+        description="Add a new student, teacher, or staff member to the system."
+        onSubmit={handleAddPerson}
+        submitLabel="Add Person"
+      />
 
       {/* Edit Person Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          resetForm();
-          setSelectedPerson(null);
-        }
-        setIsEditDialogOpen(open);
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Person</DialogTitle>
-            <DialogDescription>Update details for {selectedPerson?.firstName} {selectedPerson?.lastName}</DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleEditPerson)} className="space-y-4">
-              <PersonFormContent />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <PersonFormDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        title="Edit Person"
+        description={`Update the details for ${selectedPerson?.firstName} ${selectedPerson?.lastName}`}
+        onSubmit={handleEditPerson}
+        submitLabel="Save Changes"
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -641,7 +856,8 @@ const Users = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete {selectedPerson?.firstName} {selectedPerson?.lastName} and all their associated data.
+              This will permanently delete {selectedPerson?.firstName} {selectedPerson?.lastName}{" "}
+              and all their associated biometric data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -649,7 +865,7 @@ const Users = () => {
             <AlertDialogAction
               onClick={handleDeletePerson}
               disabled={isSubmitting}
-              className="bg-destructive text-destructive-foreground"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isSubmitting ? "Deleting..." : "Delete"}
             </AlertDialogAction>

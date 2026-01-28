@@ -2,10 +2,11 @@ import { UserRole } from "@/contexts/AuthContext";
 
 // Define which routes each role can access
 const rolePermissions: Record<UserRole, string[]> = {
-  admin: ["/dashboard", "/access-logs"],
-  security: ["/dashboard", "/access-logs"],
+  admin: ["/dashboard", "/access-control", "/access-logs"],
+  security: ["/dashboard", "/access-control", "/access-logs"],
   super_admin: [
     "/dashboard",
+    "/access-control",
     "/access-logs",
     "/users",
     "/enrollment",

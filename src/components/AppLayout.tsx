@@ -27,6 +27,7 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
+  Lock,
   LayoutDashboard,
   History,
 } from "lucide-react";
@@ -59,6 +60,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       title: "User Management",
       icon: Users,
       path: "/users",
+    },
+    {
+      title: "Access Control",
+      icon: Lock,
+      path: "/access-control",
     },
     {
       title: "Access Logs",

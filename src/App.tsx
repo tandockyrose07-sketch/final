@@ -14,7 +14,7 @@ import Login from "./pages/Login";
 import SuperAdminSignup from "./pages/SuperAdminSignup";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
-import AccessControl from "./pages/access-control";
+
 import AccessLogs from "./pages/AccessLogs";
 import Enrollment from "./pages/Enrollment";
 import Analytics from "./pages/Analytics";
@@ -57,7 +57,7 @@ const App = () => (
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
-              <Route path="/access-control" element={<ProtectedRoute><AccessControl /></ProtectedRoute>} />
+              
               <Route path="/access-logs" element={<ProtectedRoute><AccessLogs /></ProtectedRoute>} />
               <Route path="/enrollment" element={<ProtectedRoute><Enrollment /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
